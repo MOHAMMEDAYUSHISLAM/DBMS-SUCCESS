@@ -1,0 +1,201 @@
+model Product {
+  // ... existing fields
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isActive])
+  @@index([isFeatured])
+}
+
+model Order {
+  // ... existing fields
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([paymentStatus])
+}
+
+model CartItem {
+  // ... existing fields
+  @@index([cartId])
+  @@index([productId])
+  @@unique([cartId, productId, variantId]) // Prevent duplicate items
+}
+
+model ProductVariant {
+  // ... existing fields
+  @@unique([productId, variantName, variantValue]) // Prevent duplicate variants
+}
+// Change from lowercase to PascalCase to match convention
+enum PaymentStatus {  // Changed from paymentStatus
+  PENDING
+  PAID
+  FAILED
+}
+
+model Order {
+  // ... existing fields
+  paymentStatus PaymentStatus @default(PENDING)  // Updated reference
+}
+model User {
+  // ... existing fields
+  phoneNumber String? @db.VarChar(20)
+  isEmailVerified Boolean @default(false)
+  lastLoginAt DateTime?
+  refreshToken String? @db.Text()
+}
+
+model Product {
+  // ... existing fields
+  sku String? @unique @db.VarChar(50)  // Add SKU for inventory tracking
+  weight Float?  // For shipping calculations
+  dimensions Json?  // For shipping
+  tags String[]  // For better search
+  viewCount Int @default(0)
+  averageRating Float @default(0)
+  reviewCount Int @default(0)
+}
+
+model Category {
+  // ... existing fields
+  metaTitle String? @db.VarChar(255)
+  metaDescription String? @db.Text()
+  isActive Boolean @default(true)
+  displayOrder Int @default(0)
+}
+model Review {
+  id String @id @default(uuid()) @db.Uuid()
+  userId String @db.Uuid()
+  productId String @db.Uuid()
+  rating Int  // 1-5
+  title String? @db.VarChar(255)
+  comment String? @db.Text()
+  isVerifiedPurchase Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // One review per user per product
+  @@index([productId])
+  @@index([userId])
+}
+model InventoryLog {
+  id String @id @default(uuid()) @db.Uuid()
+  productId String @db.Uuid()
+  variantId String? @db.Uuid()
+  quantityChange Int  // Positive for additions, negative for deductions
+  reason String @db.VarChar(100) // 'PURCHASE', 'RETURN', 'STOCK_UPDATE', 'ADJUSTMENT'
+  referenceId String? @db.VarChar(255) // Order ID or other reference
+  createdAt DateTime @default(now())
+  performedBy String? @db.VarChar(255)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([createdAt])
+}
+model Coupon {
+  id String @id @default(uuid()) @db.Uuid()
+  code String @unique @db.VarChar(50)
+  description String? @db.Text()
+  discountType DiscountType @default(PERCENTAGE)
+  discountValue Float
+  minimumOrderAmount Float?
+  maximumDiscount Float?
+  startDate DateTime
+  endDate DateTime
+  usageLimit Int?
+  usageCount Int @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users UserCoupon[]
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+model UserCoupon {
+  id String @id @default(uuid()) @db.Uuid()
+  userId String @db.Uuid()
+  couponId String @db.Uuid()
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+}
+model Address {
+  id String @id @default(uuid()) @db.Uuid()
+  userId String @db.Uuid()
+  type AddressType @default(SHIPPING)
+  firstName String @db.VarChar(100)
+  lastName String @db.VarChar(100)
+  addressLine1 String @db.VarChar(255)
+  addressLine2 String? @db.VarChar(255)
+  city String @db.VarChar(100)
+  state String @db.VarChar(100)
+  postalCode String @db.VarChar(20)
+  country String @db.VarChar(100)
+  phoneNumber String? @db.VarChar(20)
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, isDefault]) // Only one default address per user
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+  BOTH
+}
+model Payment {
+  id String @id @default(uuid()) @db.Uuid()
+  orderId String @db.Uuid()
+  amount Float
+  currency String @default("USD") @db.VarChar(3)
+  paymentMethod String @db.VarChar(50)
+  transactionId String? @unique @db.VarChar(255)
+  status PaymentStatus @default(PENDING)
+  gatewayResponse Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([transactionId])
+}
+// Add to all models that should be soft-deletable
+model Product {
+  // ... existing fields
+  deletedAt DateTime?
+  
+  @@index([deletedAt])
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid()
+  userId String? @db.Uuid()
+  action String @db.VarChar(100)
+  entityType String @db.VarChar(50)
+  entityId String @db.Uuid()
+  changes Json?
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text()
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
