@@ -1,0 +1,277 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+
+// Import routes
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import categoryRoutes from './routes/categoryRoute.js';
+import productRoute from './routes/products/index.js';
+import cartRoute from './routes/cartRoute.js';
+import orderRoutes from './routes/orderRoutes.js';
+
+// Import middleware
+import { errorHandler } from './middleware/errorHandler.js';
+import { notFoundHandler } from './middleware/notFoundHandler.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
+import { requestLogger } from './middleware/requestLogger.js';
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+
+// ====================
+// MIDDLEWARE SETUP
+// ====================
+
+// 1. Security Middleware
+app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+    crossOriginEmbedderPolicy: true,
+    crossOriginOpenerPolicy: true,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    dnsPrefetchControl: true,
+    frameguard: { action: 'deny' },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    ieNoOpen: true,
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    xssFilter: true,
+}));
+
+// 2. CORS Configuration
+app.use(cors({
+    origin: process.env.CLIENT_URL?.split(',') || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 600 // 10 minutes
+}));
+
+// 3. Compression for performance
+app.use(compression());
+
+// 4. Request Parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// 5. Logging
+if (process.env.NODE_ENV === 'production') {
+    app.use(morgan('combined'));
+} else {
+    app.use(morgan('dev'));
+}
+
+// 6. Custom Request Logger
+app.use(requestLogger);
+
+// 7. Rate Limiting
+app.use('/api', rateLimiter);
+
+// 8. Static Files (if needed)
+app.use('/uploads', express.static('uploads'));
+
+// ====================
+// API ROUTES
+// ====================
+
+// API Version prefix
+const API_VERSION = process.env.API_VERSION || 'v1';
+const API_PREFIX = `/api/${API_VERSION}`;
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV,
+        version: API_VERSION
+    });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({
+        message: 'API Server is running',
+        version: API_VERSION,
+        documentation: '/api/docs',
+        endpoints: {
+            auth: '/auth',
+            users: '/users',
+            categories: '/category',
+            products: '/product',
+            cart: '/cart',
+            orders: '/order'
+        }
+    });
+});
+
+// Mount API routes
+app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${API_PREFIX}/users`, userRoutes);
+app.use(`${API_PREFIX}/category`, categoryRoutes);
+app.use(`${API_PREFIX}/product`, productRoute);
+app.use(`${API_PREFIX}/cart`, cartRoute);
+app.use(`${API_PREFIX}/order`, orderRoutes);
+
+// ====================
+// ERROR HANDLING
+// ====================
+
+// 404 Not Found handler
+app.use(notFoundHandler);
+
+// Global error handler
+app.use(errorHandler);
+
+// ====================
+// EXPORT
+// ====================
+
+export default app;
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+import { z } from 'zod';
+
+// Example validation middleware
+const validateRequest = (schema) => {
+    return (req, res, next) => {
+        const result = schema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({
+                status: 'Validation Error',
+                errors: result.error.errors
+            });
+        }
+        req.validatedData = result.data;
+        next();
+    };
+};
+
+// Example usage in routes
+const userSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6)
+});
+import cors from 'cors';
+
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+}));
+import morgan from 'morgan';
+
+app.use(morgan('dev')); // For development
+// or
+app.use(morgan('combined')); // For production
+import helmet from 'helmet';
+
+app.use(helmet());
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
+
+app.use('/api', limiter);
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import categoryRoutes from './routes/categoryRoute.js';
+import productRoute from './routes/products/index.js';
+import cartRoute from './routes/cartRoute.js';
+import orderRoutes from './routes/orderRoutes.js';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api', limiter);
+
+// Logging
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/category', categoryRoutes);
+app.use('/product', productRoute);
+app.use('/cart', cartRoute);
+app.use('/order', orderRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Not found handler
+app.use((req, res) => {
+    res.status(404).json({
+        status: 'Not Found',
+        message: 'The requested resource was not found'
+    });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+    const message = err.isOperational ? err.message : 'Something went wrong!';
+    
+    console.error(err.stack);
+    
+    res.status(statusCode).json({
+        status: 'Error',
+        message: message,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+});
+{
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "jest"
+  }
+}
