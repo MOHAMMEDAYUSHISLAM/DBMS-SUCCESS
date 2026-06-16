@@ -1,0 +1,131 @@
+{
+  "cSpell.words": [
+    "Varchar"
+  ]
+}
+{
+  "cSpell.words": [
+    "Varchar",
+    "varchar",
+    "VARCHAR",
+    "CHAR",
+    "TEXT",
+    "DECIMAL",
+    "TIMESTAMP",
+    "BOOLEAN",
+    "ENUM",
+    "AUTO_INCREMENT",
+    "PRIMARY KEY",
+    "FOREIGN KEY",
+    "INDEX",
+    "UNIQUE",
+    "CHECK",
+    "DEFAULT",
+    "NULL",
+    "NOT NULL",
+    "CASCADE",
+    "RESTRICT",
+    "TRIGGER",
+    "PROCEDURE",
+    "DELIMITER",
+    "INNER JOIN",
+    "LEFT JOIN",
+    "RIGHT JOIN",
+    "GROUP BY",
+    "ORDER BY",
+    "DISTINCT",
+    "COUNT",
+    "SUM",
+    "AVG",
+    "MIN",
+    "MAX",
+    "HAVING",
+    "WHERE",
+    "INSERT INTO",
+    "UPDATE",
+    "DELETE FROM",
+    "SELECT",
+    "FROM",
+    "INNER",
+    "OUTER",
+    "JOIN",
+    "ON DELETE",
+    "ON UPDATE"
+  ]
+}
+{
+  "cSpell.words": [
+    "MyISAM",
+    "InnoDB",
+    "MEMORY",
+    "CSV",
+    "ARCHIVE",
+    "BLACKHOLE",
+    "FEDERATED",
+    "NDBCLUSTER",
+    "MERGE"
+  ]
+}
+{
+  "cSpell.words": [
+    "SERIAL",
+    "BIGSERIAL",
+    "SMALLSERIAL",
+    "UUID",
+    "JSONB",
+    "TSVECTOR",
+    "TSQUERY",
+    "ILIKE",
+    "DISTINCT ON"
+  ]
+}
+{
+  "cSpell.words": [
+    "NVARCHAR",
+    "NTEXT",
+    "SMALLDATETIME",
+    "DATETIME2",
+    "DATETIMEOFFSET",
+    "MONEY",
+    "SMALLMONEY",
+    "IDENTITY",
+    "ROWVERSION",
+    "UNIQUEIDENTIFIER"
+  ]
+}
+{
+  "cSpell.words": [
+    "Varchar",
+    "varchar",
+    "VARCHAR",
+    "CHAR",
+    "TEXT",
+    "DECIMAL",
+    "TIMESTAMP",
+    "BOOLEAN",
+    "ENUM",
+    "AUTO_INCREMENT"
+  ],
+  
+  // SQL Formatter Settings
+  "[sql]": {
+    "editor.defaultFormatter": "adpyke.vscode-sql-formatter",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+  
+  // SQL Syntax Highlighting
+  "sql-formatter.uppercase": false,
+  "sql-formatter.linesBetweenQueries": 2,
+  
+  // Database Extension Settings (if using)
+  "database-client.autoLimit": 100,
+  "database-client.autoFocus": false,
+  "database-client.showSchema": true,
+  
+  // General Editor
+  "editor.wordWrap": "on",
+  "editor.renderWhitespace": "all",
+  "files.encoding": "utf8",
+  "files.eol": "\n"
+}
