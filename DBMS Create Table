@@ -1,0 +1,283 @@
+CREATE TABLE BOOKS (
+    book_id INT PRIMARY KEY,
+    title VARCHAR(100),
+    category VARCHAR(50),
+    price DECIMAL(10,2)
+);
+
+CREATE TABLE MEMBERS (
+    member_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    join_date DATE
+);
+CREATE TABLE DOCTORS (
+    doc_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    specialization VARCHAR(50),
+    salary DECIMAL(10,2)
+);
+
+CREATE TABLE PATIENTS (
+    patient_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    disease VARCHAR(100)
+);
+
+CREATE TABLE CUSTOMERS (
+    cust_id INT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    city VARCHAR(50)
+);
+
+CREATE TABLE ORDERS (
+    order_id INT PRIMARY KEY,
+    cust_id INT,
+    total_price DECIMAL(10,2),
+    order_date DATE,
+    FOREIGN KEY (cust_id) REFERENCES CUSTOMERS(cust_id)
+);
+CREATE TABLE STUDENTS (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department VARCHAR(50),
+    cgpa DECIMAL(3,2)
+);
+
+CREATE TABLE COURSES (
+    course_id INT PRIMARY KEY,
+    course_name VARCHAR(100),
+    credits INT
+);
+CREATE TABLE AUTHORS (
+    author_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    country VARCHAR(50)
+);
+
+CREATE TABLE BOOK_AUTHORS (
+    book_id INT,
+    author_id INT,
+    PRIMARY KEY (book_id, author_id),
+    FOREIGN KEY (book_id) REFERENCES BOOKS(book_id),
+    FOREIGN KEY (author_id) REFERENCES AUTHORS(author_id)
+);
+
+CREATE TABLE BORROW (
+    borrow_id INT PRIMARY KEY,
+    book_id INT,
+    member_id INT,
+    borrow_date DATE,
+    return_date DATE,
+    FOREIGN KEY (book_id) REFERENCES BOOKS(book_id),
+    FOREIGN KEY (member_id) REFERENCES MEMBERS(member_id)
+);
+CREATE TABLE APPOINTMENTS (
+    appointment_id INT PRIMARY KEY,
+    doc_id INT,
+    patient_id INT,
+    appointment_date DATE,
+    FOREIGN KEY (doc_id) REFERENCES DOCTORS(doc_id),
+    FOREIGN KEY (patient_id) REFERENCES PATIENTS(patient_id)
+);
+
+CREATE TABLE MEDICINES (
+    med_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    price DECIMAL(10,2)
+);
+
+CREATE TABLE PRESCRIPTIONS (
+    prescription_id INT PRIMARY KEY,
+    patient_id INT,
+    doc_id INT,
+    med_id INT,
+    date DATE,
+    FOREIGN KEY (patient_id) REFERENCES PATIENTS(patient_id),
+    FOREIGN KEY (doc_id) REFERENCES DOCTORS(doc_id),
+    FOREIGN KEY (med_id) REFERENCES MEDICINES(med_id)
+);
+CREATE TABLE PRODUCTS (
+    product_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    price DECIMAL(10,2),
+    stock INT
+);
+
+CREATE TABLE ORDER_ITEMS (
+    order_item_id INT PRIMARY KEY,
+    order_id INT,
+    product_id INT,
+    quantity INT,
+    FOREIGN KEY (order_id) REFERENCES ORDERS(order_id),
+    FOREIGN KEY (product_id) REFERENCES PRODUCTS(product_id)
+);
+
+CREATE TABLE PAYMENTS (
+    payment_id INT PRIMARY KEY,
+    order_id INT,
+    payment_date DATE,
+    amount DECIMAL(10,2),
+    method VARCHAR(50),
+    FOREIGN KEY (order_id) REFERENCES ORDERS(order_id)
+);
+CREATE TABLE ENROLLMENTS (
+    enrollment_id INT PRIMARY KEY,
+    student_id INT,
+    course_id INT,
+    semester VARCHAR(20),
+    grade VARCHAR(5),
+    FOREIGN KEY (student_id) REFERENCES STUDENTS(student_id),
+    FOREIGN KEY (course_id) REFERENCES COURSES(course_id)
+);
+
+CREATE TABLE TEACHERS (
+    teacher_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department VARCHAR(50)
+);
+
+CREATE TABLE COURSE_TEACHERS (
+    course_id INT,
+    teacher_id INT,
+    PRIMARY KEY (course_id, teacher_id),
+    FOREIGN KEY (course_id) REFERENCES COURSES(course_id),
+    FOREIGN KEY (teacher_id) REFERENCES TEACHERS(teacher_id)
+);
+CREATE TABLE DEPARTMENTS (
+    dept_id INT PRIMARY KEY,
+    dept_name VARCHAR(100)
+);
+
+CREATE TABLE EMPLOYEES (
+    emp_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    dept_id INT,
+    salary DECIMAL(10,2),
+    hire_date DATE,
+    FOREIGN KEY (dept_id) REFERENCES DEPARTMENTS(dept_id)
+);
+
+CREATE TABLE ATTENDANCE (
+    attendance_id INT PRIMARY KEY,
+    emp_id INT,
+    date DATE,
+    status VARCHAR(20),
+    FOREIGN KEY (emp_id) REFERENCES EMPLOYEES(emp_id)
+);
+CREATE TABLE BANKS (
+    bank_id INT PRIMARY KEY,
+    bank_name VARCHAR(100),
+    branch VARCHAR(100)
+);
+
+CREATE TABLE ACCOUNTS (
+    account_id INT PRIMARY KEY,
+    bank_id INT,
+    cust_id INT,
+    balance DECIMAL(12,2),
+    account_type VARCHAR(50),
+    FOREIGN KEY (bank_id) REFERENCES BANKS(bank_id),
+    FOREIGN KEY (cust_id) REFERENCES CUSTOMERS(cust_id)
+);
+
+CREATE TABLE TRANSACTIONS (
+    transaction_id INT PRIMARY KEY,
+    account_id INT,
+    amount DECIMAL(10,2),
+    transaction_type VARCHAR(20),
+    transaction_date DATE,
+    FOREIGN KEY (account_id) REFERENCES ACCOUNTS(account_id)
+);
+CREATE TABLE DRIVERS (
+    driver_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    license_no VARCHAR(50),
+    phone VARCHAR(20)
+);
+
+CREATE TABLE VEHICLES (
+    vehicle_id INT PRIMARY KEY,
+    driver_id INT,
+    model VARCHAR(100),
+    plate_no VARCHAR(20),
+    FOREIGN KEY (driver_id) REFERENCES DRIVERS(driver_id)
+);
+
+CREATE TABLE RIDES (
+    ride_id INT PRIMARY KEY,
+    cust_id INT,
+    vehicle_id INT,
+    pickup_location VARCHAR(100),
+    drop_location VARCHAR(100),
+    fare DECIMAL(10,2),
+    ride_date DATE,
+    FOREIGN KEY (cust_id) REFERENCES CUSTOMERS(cust_id),
+    FOREIGN KEY (vehicle_id) REFERENCES VEHICLES(vehicle_id)
+);
+CREATE TABLE SUPPLIERS (
+    supplier_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    contact VARCHAR(50)
+);
+
+CREATE TABLE WAREHOUSES (
+    warehouse_id INT PRIMARY KEY,
+    location VARCHAR(100)
+);
+
+CREATE TABLE INVENTORY (
+    inventory_id INT PRIMARY KEY,
+    product_id INT,
+    warehouse_id INT,
+    quantity INT,
+    FOREIGN KEY (product_id) REFERENCES PRODUCTS(product_id),
+    FOREIGN KEY (warehouse_id) REFERENCES WAREHOUSES(warehouse_id)
+);
+CREATE TABLE USERS (
+    user_id INT PRIMARY KEY,
+    username VARCHAR(50),
+    email VARCHAR(100)
+);
+
+CREATE TABLE POSTS (
+    post_id INT PRIMARY KEY,
+    user_id INT,
+    content TEXT,
+    post_date DATE,
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+);
+
+CREATE TABLE COMMENTS (
+    comment_id INT PRIMARY KEY,
+    post_id INT,
+    user_id INT,
+    comment TEXT,
+    comment_date DATE,
+    FOREIGN KEY (post_id) REFERENCES POSTS(post_id),
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+);
+
+CREATE TABLE LIKES (
+    like_id INT PRIMARY KEY,
+    post_id INT,
+    user_id INT,
+    FOREIGN KEY (post_id) REFERENCES POSTS(post_id),
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+);
+CREATE TABLE EXAMS (
+    exam_id INT PRIMARY KEY,
+    course_id INT,
+    exam_date DATE,
+    FOREIGN KEY (course_id) REFERENCES COURSES(course_id)
+);
+
+CREATE TABLE RESULTS (
+    result_id INT PRIMARY KEY,
+    student_id INT,
+    exam_id INT,
+    marks DECIMAL(5,2),
+    FOREIGN KEY (student_id) REFERENCES STUDENTS(student_id),
+    FOREIGN KEY (exam_id) REFERENCES EXAMS(exam_id)
+);
