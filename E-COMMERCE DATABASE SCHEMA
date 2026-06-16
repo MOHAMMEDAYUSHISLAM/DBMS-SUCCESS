@@ -1,0 +1,363 @@
+-- =============================================
+-- E-COMMERCE DATABASE SCHEMA
+-- Tables: Customers, Products, Categories, Orders, 
+--          OrderItems, Payments, Reviews, ShoppingCart
+-- =============================================
+
+-- 1. CUSTOMERS TABLE
+CREATE TABLE Customers (
+    customer_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    date_of_birth DATE,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    customer_tier ENUM('Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Bronze',
+    CONSTRAINT chk_email_format CHECK (email LIKE '%@%._%')
+);
+
+-- 2. CATEGORIES TABLE
+CREATE TABLE Categories (
+    category_id INT PRIMARY KEY AUTO_INCREMENT,
+    category_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    parent_category_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_category_id) REFERENCES Categories(category_id)
+);
+
+-- 3. PRODUCTS TABLE
+CREATE TABLE Products (
+    product_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    sku VARCHAR(50) UNIQUE NOT NULL,
+    price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
+    cost DECIMAL(10, 2) CHECK (cost >= 0),
+    stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
+    category_id INT,
+    brand VARCHAR(100),
+    weight_kg DECIMAL(8, 3),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES Categories(category_id),
+    INDEX idx_sku (sku),
+    INDEX idx_price (price)
+);
+
+-- 4. CUSTOMER_ADDRESSES TABLE (1-to-many relationship)
+CREATE TABLE Customer_Addresses (
+    address_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255),
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(50),
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    address_type ENUM('Home', 'Work', 'Shipping', 'Billing') DEFAULT 'Home',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
+    INDEX idx_customer_address (customer_id)
+);
+
+-- 5. ORDERS TABLE
+CREATE TABLE Orders (
+    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_status ENUM('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned') DEFAULT 'Pending',
+    shipping_address_id INT NOT NULL,
+    billing_address_id INT NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL CHECK (subtotal >= 0),
+    tax_amount DECIMAL(10, 2) DEFAULT 0 CHECK (tax_amount >= 0),
+    shipping_cost DECIMAL(10, 2) DEFAULT 0 CHECK (shipping_cost >= 0),
+    discount_amount DECIMAL(10, 2) DEFAULT 0 CHECK (discount_amount >= 0),
+    total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
+    payment_status ENUM('Pending', 'Paid', 'Failed', 'Refunded') DEFAULT 'Pending',
+    shipping_tracking_number VARCHAR(100),
+    estimated_delivery_date DATE,
+    actual_delivery_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
+    FOREIGN KEY (shipping_address_id) REFERENCES Customer_Addresses(address_id),
+    FOREIGN KEY (billing_address_id) REFERENCES Customer_Addresses(address_id),
+    INDEX idx_order_number (order_number),
+    INDEX idx_customer_order (customer_id),
+    INDEX idx_order_status (order_status)
+);
+
+-- 6. ORDER_ITEMS TABLE
+CREATE TABLE Order_Items (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
+    discount_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
+    total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0),
+    FOREIGN KEY (order_id) REFERENCES Orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES Products(product_id),
+    INDEX idx_order_items (order_id, product_id)
+);
+
+-- 7. PAYMENTS TABLE
+CREATE TABLE Payments (
+    payment_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    payment_method ENUM('Credit Card', 'Debit Card', 'PayPal', 'Bank Transfer', 'Cash', 'Gift Card') NOT NULL,
+    payment_provider VARCHAR(100),
+    transaction_id VARCHAR(100) UNIQUE,
+    amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    payment_status ENUM('Pending', 'Completed', 'Failed', 'Refunded', 'Chargeback') DEFAULT 'Pending',
+    refund_amount DECIMAL(10, 2) DEFAULT 0,
+    refund_date TIMESTAMP NULL,
+    card_last_four VARCHAR(4),
+    billing_zip VARCHAR(20),
+    FOREIGN KEY (order_id) REFERENCES Orders(order_id),
+    INDEX idx_transaction_id (transaction_id),
+    INDEX idx_payment_order (order_id)
+);
+
+-- 8. PRODUCT_REVIEWS TABLE
+CREATE TABLE Product_Reviews (
+    review_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    order_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_title VARCHAR(200),
+    review_text TEXT,
+    is_verified_purchase BOOLEAN DEFAULT FALSE,
+    helpful_votes INT DEFAULT 0,
+    unhelpful_votes INT DEFAULT 0,
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_approved BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (product_id) REFERENCES Products(product_id),
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
+    FOREIGN KEY (order_id) REFERENCES Orders(order_id),
+    INDEX idx_product_review (product_id),
+    INDEX idx_customer_review (customer_id),
+    UNIQUE KEY unique_review (customer_id, order_id, product_id)
+);
+
+-- 9. SHOPPING_CART TABLE (Pending orders)
+CREATE TABLE Shopping_Cart (
+    cart_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES Products(product_id),
+    UNIQUE KEY unique_cart_item (customer_id, product_id)
+);
+
+-- 10. INVENTORY_LOG TABLE (Audit trail)
+CREATE TABLE Inventory_Log (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    change_type ENUM('Purchase', 'Sale', 'Return', 'Adjustment', 'Restock') NOT NULL,
+    quantity_change INT NOT NULL,
+    previous_quantity INT,
+    new_quantity INT,
+    reference_id VARCHAR(100),
+    reference_type VARCHAR(50),
+    notes TEXT,
+    created_by VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES Products(product_id),
+    INDEX idx_inventory_product (product_id)
+);
+
+-- =============================================
+-- SAMPLE DATA INSERTION (for testing)
+-- =============================================
+
+-- Insert Categories
+INSERT INTO Categories (category_name, description) VALUES
+('Electronics', 'Electronic devices and accessories'),
+('Clothing', 'Apparel and fashion items'),
+('Books', 'Books and publications'),
+('Home & Garden', 'Home improvement and gardening supplies'),
+('Sports', 'Sports equipment and accessories');
+
+-- Insert Sample Customers
+INSERT INTO Customers (first_name, last_name, email, phone, customer_tier) VALUES
+('John', 'Doe', 'john.doe@email.com', '+1234567890', 'Gold'),
+('Jane', 'Smith', 'jane.smith@email.com', '+1987654321', 'Silver'),
+('Robert', 'Johnson', 'robert.j@email.com', '+1122334455', 'Bronze');
+
+-- Insert Sample Products
+INSERT INTO Products (product_name, description, sku, price, cost, stock_quantity, category_id, brand) VALUES
+('Smartphone X', 'Latest model with advanced features', 'PHONE-001', 799.99, 450.00, 50, 1, 'TechBrand'),
+('Wireless Headphones', 'Noise-canceling Bluetooth headphones', 'AUDIO-002', 149.99, 80.00, 100, 1, 'SoundPro'),
+('Running Shoes', 'Comfortable athletic running shoes', 'SHOE-003', 89.99, 45.00, 75, 2, 'SportFit');
+
+-- =============================================
+-- USEFUL VIEWS
+-- =============================================
+
+-- View: Customer Order Summary
+CREATE VIEW Customer_Order_Summary AS
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.email,
+    COUNT(o.order_id) as total_orders,
+    SUM(o.total_amount) as total_spent,
+    AVG(o.total_amount) as average_order_value,
+    MAX(o.order_date) as last_order_date
+FROM Customers c
+LEFT JOIN Orders o ON c.customer_id = o.customer_id
+WHERE o.order_status NOT IN ('Cancelled', 'Returned')
+GROUP BY c.customer_id;
+
+-- View: Product Sales Performance
+CREATE VIEW Product_Sales_Performance AS
+SELECT 
+    p.product_id,
+    p.product_name,
+    p.sku,
+    COUNT(oi.order_item_id) as times_ordered,
+    SUM(oi.quantity) as total_units_sold,
+    SUM(oi.total_price) as total_revenue,
+    AVG(oi.unit_price) as average_selling_price,
+    AVG(pr.rating) as average_rating
+FROM Products p
+LEFT JOIN Order_Items oi ON p.product_id = oi.product_id
+LEFT JOIN Product_Reviews pr ON p.product_id = pr.product_id
+GROUP BY p.product_id;
+
+-- =============================================
+-- STORED PROCEDURES
+-- =============================================
+
+DELIMITER $$
+
+-- Procedure: Place Order (Move from cart to order)
+CREATE PROCEDURE Place_Order(
+    IN p_customer_id INT,
+    IN p_shipping_address_id INT,
+    IN p_billing_address_id INT
+)
+BEGIN
+    DECLARE v_order_id INT;
+    DECLARE v_subtotal DECIMAL(10,2);
+    
+    -- Start transaction
+    START TRANSACTION;
+    
+    -- Calculate subtotal from cart
+    SELECT SUM(c.quantity * p.price) INTO v_subtotal
+    FROM Shopping_Cart c
+    JOIN Products p ON c.product_id = p.product_id
+    WHERE c.customer_id = p_customer_id;
+    
+    -- Insert order
+    INSERT INTO Orders (
+        order_number, customer_id, shipping_address_id, 
+        billing_address_id, subtotal, total_amount, order_status
+    ) VALUES (
+        CONCAT('ORD-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', p_customer_id, '-', FLOOR(RAND()*10000)),
+        p_customer_id,
+        p_shipping_address_id,
+        p_billing_address_id,
+        v_subtotal,
+        v_subtotal,
+        'Pending'
+    );
+    
+    SET v_order_id = LAST_INSERT_ID();
+    
+    -- Move cart items to order_items
+    INSERT INTO Order_Items (order_id, product_id, quantity, unit_price, total_price)
+    SELECT 
+        v_order_id,
+        c.product_id,
+        c.quantity,
+        p.price,
+        c.quantity * p.price
+    FROM Shopping_Cart c
+    JOIN Products p ON c.product_id = p.product_id
+    WHERE c.customer_id = p_customer_id;
+    
+    -- Clear cart
+    DELETE FROM Shopping_Cart WHERE customer_id = p_customer_id;
+    
+    -- Update stock
+    UPDATE Products p
+    JOIN Order_Items oi ON p.product_id = oi.product_id
+    SET p.stock_quantity = p.stock_quantity - oi.quantity
+    WHERE oi.order_id = v_order_id;
+    
+    COMMIT;
+END$$
+
+DELIMITER ;
+
+-- =============================================
+-- TRIGGERS
+-- =============================================
+
+-- Trigger: Automatically update total in order_items
+DELIMITER $$
+
+CREATE TRIGGER Calculate_Order_Item_Total
+BEFORE INSERT ON Order_Items
+FOR EACH ROW
+BEGIN
+    SET NEW.total_price = NEW.quantity * NEW.unit_price * (1 - NEW.discount_percentage/100);
+END$$
+
+-- Trigger: Update product stock after order cancellation
+CREATE TRIGGER Restore_Stock_On_Order_Cancel
+AFTER UPDATE ON Orders
+FOR EACH ROW
+BEGIN
+    IF NEW.order_status = 'Cancelled' AND OLD.order_status != 'Cancelled' THEN
+        UPDATE Products p
+        JOIN Order_Items oi ON p.product_id = oi.product_id
+        SET p.stock_quantity = p.stock_quantity + oi.quantity
+        WHERE oi.order_id = NEW.order_id;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- =============================================
+-- INDEXES FOR PERFORMANCE (Additional)
+-- =============================================
+
+CREATE INDEX idx_orders_date ON Orders(order_date);
+CREATE INDEX idx_orders_status_date ON Orders(order_status, order_date);
+CREATE INDEX idx_order_items_order ON Order_Items(order_id);
+CREATE INDEX idx_payments_status ON Payments(payment_status);
+CREATE INDEX idx_products_category ON Products(category_id);
+CREATE INDEX idx_reviews_rating ON Product_Reviews(rating);
+
+-- =============================================
+-- USER PERMISSIONS (Example)
+-- =============================================
+
+-- Create application user with limited permissions
+CREATE USER IF NOT EXISTS 'app_user'@'localhost' IDENTIFIED BY 'secure_password';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ecommerce_db.* TO 'app_user'@'localhost';
+
+-- Create reporting user with read-only access
+CREATE USER IF NOT EXISTS 'report_user'@'localhost' IDENTIFIED BY 'report_password';
+GRANT SELECT ON ecommerce_db.* TO 'report_user'@'localhost';
+
+FLUSH PRIVILEGES;
