@@ -1,0 +1,166 @@
+DAIRY FARM MANAGEMENT SYSTEM - DATABASE SCHEME
+1. ADMIN TABLE
+-- Stores system administrator information
+CREATE TABLE Admin (
+    admin_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'admin',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. FARM TABLE
+-- Stores farm details managed by administrators
+CREATE TABLE Farm (
+    farm_id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL,
+    farm_name VARCHAR(100) NOT NULL,
+    location VARCHAR(150) NOT NULL,
+    total_cows INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE
+);
+
+-- 3. COW TABLE
+-- Stores individual cow information
+CREATE TABLE Cow (
+    cow_id INT PRIMARY KEY AUTO_INCREMENT,
+    farm_id INT NOT NULL,
+    breed VARCHAR(50),
+    age INT,
+    health_status VARCHAR(50) DEFAULT 'Healthy',
+    milk_production FLOAT DEFAULT 0,
+    purchase_date DATE,
+    status VARCHAR(20) DEFAULT 'Active',
+    FOREIGN KEY (farm_id) REFERENCES Farm(farm_id) ON DELETE CASCADE
+);
+
+-- 4. MILK PRODUCTION TABLE
+-- Tracks daily milk production records
+CREATE TABLE Milk_Production (
+    production_id INT PRIMARY KEY AUTO_INCREMENT,
+    cow_id INT NOT NULL,
+    date DATE NOT NULL,
+    quantity FLOAT NOT NULL,
+    shift VARCHAR(20),  -- Morning/Evening
+    recorded_by INT,
+    FOREIGN KEY (cow_id) REFERENCES Cow(cow_id) ON DELETE CASCADE
+);
+
+-- 5. EXPENSES TABLE
+-- Records all farm-related expenses
+CREATE TABLE Expenses (
+    expense_id INT PRIMARY KEY AUTO_INCREMENT,
+    farm_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    amount FLOAT NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
+    receipt_no VARCHAR(50),
+    FOREIGN KEY (farm_id) REFERENCES Farm(farm_id) ON DELETE CASCADE
+);
+
+-- 6. SALES TABLE
+-- Records all sales transactions
+CREATE TABLE Sales (
+    sales_id INT PRIMARY KEY AUTO_INCREMENT,
+    farm_id INT NOT NULL,
+    date DATE NOT NULL,
+    quantity FLOAT NOT NULL,
+    price FLOAT NOT NULL,
+    total_amount FLOAT,
+    customer_name VARCHAR(100),
+    payment_method VARCHAR(50),
+    FOREIGN KEY (farm_id) REFERENCES Farm(farm_id) ON DELETE CASCADE
+);
+
+-- 7. PROFIT TABLE
+-- Calculates and stores profit data
+CREATE TABLE Profit (
+    profit_id INT PRIMARY KEY AUTO_INCREMENT,
+    farm_id INT NOT NULL,
+    total_income FLOAT DEFAULT 0,
+    total_expense FLOAT DEFAULT 0,
+    net_profit FLOAT DEFAULT 0,
+    time_period VARCHAR(20) NOT NULL,
+    period_start DATE,
+    period_end DATE,
+    FOREIGN KEY (farm_id) REFERENCES Farm(farm_id) ON DELETE CASCADE
+);
+
+-- 8. REPORTS TABLE
+-- Stores generated reports
+CREATE TABLE Reports (
+    report_id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL,
+    report_type VARCHAR(50) NOT NULL,
+    generated_date DATE NOT NULL,
+    report_data JSON,
+    file_path VARCHAR(255),
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE
+);
+
+-- 9. FEED INVENTORY TABLE (Additional Feature)
+CREATE TABLE Feed_Inventory (
+    feed_id INT PRIMARY KEY AUTO_INCREMENT,
+    farm_id INT NOT NULL,
+    feed_type VARCHAR(50),
+    quantity FLOAT,
+    unit VARCHAR(20),
+    cost_per_unit FLOAT,
+    purchase_date DATE,
+    expiry_date DATE,
+    FOREIGN KEY (farm_id) REFERENCES Farm(farm_id) ON DELETE CASCADE
+);
+
+-- 10. VACCINATION RECORDS TABLE (Additional Feature)
+CREATE TABLE Vaccination_Records (
+    vaccination_id INT PRIMARY KEY AUTO_INCREMENT,
+    cow_id INT NOT NULL,
+    vaccine_type VARCHAR(50),
+    vaccination_date DATE,
+    next_due_date DATE,
+    administered_by VARCHAR(100),
+    FOREIGN KEY (cow_id) REFERENCES Cow(cow_id) ON DELETE CASCADE
+);
+
+-- INDEXES FOR PERFORMANCE OPTIMIZATION
+
+CREATE INDEX idx_cow_farm ON Cow(farm_id);
+CREATE INDEX idx_milk_cow ON Milk_Production(cow_id);
+CREATE INDEX idx_milk_date ON Milk_Production(date);
+CREATE INDEX idx_expenses_farm ON Expenses(farm_id);
+CREATE INDEX idx_expenses_date ON Expenses(date);
+CREATE INDEX idx_sales_farm ON Sales(farm_id);
+CREATE INDEX idx_sales_date ON Sales(date);
+CREATE INDEX idx_profit_farm ON Profit(farm_id);
+
+-- VIEWS FOR COMMON QUERIES
+
+-- View: Daily Milk Production Summary
+CREATE VIEW Daily_Milk_Summary AS
+SELECT 
+    f.farm_name,
+    DATE(mp.date) as production_date,
+    COUNT(DISTINCT mp.cow_id) as active_cows,
+    SUM(mp.quantity) as total_milk,
+    AVG(mp.quantity) as avg_milk_per_cow
+FROM Milk_Production mp
+JOIN Cow c ON mp.cow_id = c.cow_id
+JOIN Farm f ON c.farm_id = f.farm_id
+GROUP BY f.farm_name, DATE(mp.date);
+
+-- View: Monthly Profit Analysis
+CREATE VIEW Monthly_Profit_Analysis AS
+SELECT 
+    f.farm_name,
+    DATE_FORMAT(s.date, '%Y-%m') as month,
+    COALESCE(SUM(s.total_amount), 0) as total_sales,
+    COALESCE(SUM(e.amount), 0) as total_expenses,
+    COALESCE(SUM(s.total_amount), 0) - COALESCE(SUM(e.amount), 0) as net_profit
+FROM Farm f
+LEFT JOIN Sales s ON f.farm_id = s.farm_id
+LEFT JOIN Expenses e ON f.farm_id = e.farm_id 
+    AND DATE_FORMAT(s.date, '%Y-%m') = DATE_FORMAT(e.date, '%Y-%m')
+GROUP BY f.farm_name, DATE_FORMAT(s.date, '%Y-%m');
